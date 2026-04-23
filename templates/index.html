@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Планировщик обслуживания электрооборудования</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+<main class="page">
+    <section class="hero">
+        <div>
+            <p class="eyebrow">Тема 2</p>
+            <h1>Планировщик обслуживания электрооборудования</h1>
+            <p>Система помогает планировать осмотры, ремонты и профилактику оборудования.</p>
+        </div>
+        <div class="stats">
+            <article><span>{{ stats.equipment }}</span><p>оборудования</p></article>
+            <article><span>{{ stats.planned }}</span><p>запланировано</p></article>
+            <article><span>{{ stats.in_progress }}</span><p>в работе</p></article>
+            <article><span>{{ stats.done }}</span><p>выполнено</p></article>
+        </div>
+    </section>
+
+    <section class="grid">
+        <form class="card" action="{{ url_for('create_equipment') }}" method="post">
+            <h2>Добавить оборудование</h2>
+            <input name="inventory_number" placeholder="EQ-004" required>
+            <input name="name" placeholder="Название оборудования" required>
+            <input name="equipment_type" placeholder="Тип оборудования" required>
+            <input name="location" placeholder="Место установки" required>
+            <input name="responsible" placeholder="Ответственный" required>
+            <button>Добавить</button>
+        </form>
+
+        <form class="card" action="{{ url_for('create_task') }}" method="post">
+            <h2>Запланировать обслуживание</h2>
+            <select name="equipment_id" required>
+                {% for item in equipment %}
+                    <option value="{{ item.id }}">{{ item.inventory_number }} · {{ item.name }}</option>
+                {% endfor %}
+            </select>
+            <input name="task_type" placeholder="Тип работ" required>
+            <input name="planned_date" type="date" required>
+            <select name="priority">
+                <option value="low">Низкий приоритет</option>
+                <option value="normal" selected>Обычный приоритет</option>
+                <option value="high">Высокий приоритет</option>
+            </select>
+            <textarea name="description" placeholder="Описание работ" required></textarea>
+            <button>Создать задачу</button>
+        </form>
+    </section>
+
+    <section class="card">
+        <h2>Фильтр задач</h2>
+        <form class="filter" action="{{ url_for('index') }}" method="get">
+            <input name="search" value="{{ search }}" placeholder="Поиск по оборудованию или описанию">
+            <select name="status">
+                <option value="" {% if not selected_status %}selected{% endif %}>Все статусы</option>
+                <option value="planned" {% if selected_status == 'planned' %}selected{% endif %}>Запланировано</option>
+                <option value="in_progress" {% if selected_status == 'in_progress' %}selected{% endif %}>В работе</option>
+                <option value="done" {% if selected_status == 'done' %}selected{% endif %}>Выполнено</option>
+            </select>
+            <button>Показать</button>
+        </form>
+    </section>
+
+    <section class="card">
+        <h2>План обслуживания</h2>
+        <div class="cards">
+            {% for task in tasks %}
+                <article class="task">
+                    <div>
+                        <span class="badge badge-{{ task.status }}">{{ task.status }}</span>
+                        <strong>{{ task.inventory_number }} · {{ task.name }}</strong>
+                        <p>{{ task.task_type }} · {{ task.planned_date }} · {{ task.priority }}</p>
+                        <p>{{ task.description }}</p>
+                        <small>{{ task.location }}</small>
+                    </div>
+                    <div class="actions">
+                        {% if task.status == 'planned' %}
+                            <form action="{{ url_for('start', task_id=task.id) }}" method="post"><button>Начать</button></form>
+                        {% endif %}
+                        {% if task.status != 'done' %}
+                            <form action="{{ url_for('complete', task_id=task.id) }}" method="post"><button class="secondary">Выполнено</button></form>
+                        {% endif %}
+                    </div>
+                </article>
+            {% else %}
+                <p class="muted">Задачи не найдены.</p>
+            {% endfor %}
+        </div>
+    </section>
+</main>
+</body>
+</html>
