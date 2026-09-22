@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Планировщик обслуживания электрооборудования</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+<div class="container">
+
+    <!-- ================= ШАПКА ================= -->
+    <header class="hero">
+        <div class="hero-text">
+            <span class="badge">ТЕМА 2</span>
+            <h1>Планировщик обслуживания<br>электрооборудования</h1>
+            <p>Планируйте осмотры, ремонты и профилактику. Следите за статусами задач и ответственными в одном окне.</p>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-value">{{ stats.equipment }}</div>
+                <div class="stat-label">оборудования</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ stats.planned }}</div>
+                <div class="stat-label">запланировано</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ stats.in_progress }}</div>
+                <div class="stat-label">в работе</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ stats.done }}</div>
+                <div class="stat-label">выполнено</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ================= ДВЕ ФОРМЫ ================= -->
+    <section class="forms-row">
+
+        <div class="card">
+            <h2>Добавить оборудование</h2>
+            <form action="/equipment" method="POST">
+                <input type="text" name="inventory_number" placeholder="EQ-004" required>
+                <input type="text" name="name" placeholder="Название оборудования" required>
+                <input type="text" name="equipment_type" placeholder="Тип оборудования" required>
+                <input type="text" name="location" placeholder="Место установки">
+                <input type="text" name="responsible" placeholder="Ответственный">
+                <button type="submit" class="btn btn-primary">Добавить</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2>Запланировать обслуживание</h2>
+            <form action="/tasks" method="POST">
+                <select name="equipment_id" required>
+                    <option value="" disabled selected>Выберите оборудование</option>
+                    {% for eq in equipment %}
+                        <option value="{{ eq.id }}">
+                            {{ eq.inventory_number }} — {{ eq.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+
+                <input type="text" name="task_type" placeholder="Тип работ" required>
+                <input type="date" name="planned_date" required>
+
+                <select name="priority">
+                    <option value="low">Низкий приоритет</option>
+                    <option value="normal" selected>Обычный приоритет</option>
+                    <option value="high">Высокий приоритет</option>
+                </select>
+
+                <textarea name="description" placeholder="Описание работ" rows="3"></textarea>
+                <button type="submit" class="btn btn-primary">Создать задачу</button>
+            </form>
+        </div>
+    </section>
+
+    <!-- ================= ФИЛЬТР ================= -->
+    <section class="card filter-card">
+        <h2>Фильтр задач</h2>
+        <form action="/" method="GET" class="filter-form">
+            <input type="text" name="search"
+                   placeholder="Поиск по оборудованию или описанию"
+                   value="{{ request.args.get('search', '') }}">
+
+            <select name="status">
+                <option value="">Все статусы</option>
+                <option value="planned"     {% if request.args.get('status') == 'planned' %}selected{% endif %}>Запланировано</option>
+                <option value="in_progress" {% if request.args.get('status') == 'in_progress' %}selected{% endif %}>В работе</option>
+                <option value="done"        {% if request.args.get('status') == 'done' %}selected{% endif %}>Выполнено</option>
+            </select>
+
+            <button type="submit" class="btn btn-primary">Показать</button>
+        </form>
+    </section>
+
+    <!-- ================= СПИСОК ЗАДАЧ ================= -->
+    <section class="card tasks-card">
+        <h2>План обслуживания</h2>
+
+        {% if tasks %}
+            {% for t in tasks %}
+            <div class="task {{ t.status }}">
+                <div class="task-left">
+                    <span class="status-badge {{ t.status }}">
+                        {% if t.status == 'planned' %}Запланировано
+                        {% elif t.status == 'in_progress' %}В работе
+                        {% else %}Выполнено{% endif %}
+                    </span>
+
+                    <div class="task-title">
+                        {{ t.inventory_number }} · {{ t.equipment_name }}
+                    </div>
+
+                    <div class="task-sub">
+                        <span>{{ t.task_type }}</span>
+                        <span class="dot"></span>
+                        <span>{{ t.planned_date }}</span>
+                        <span class="dot"></span>
+                        <span>приоритет: {{ t.priority }}</span>
+                    </div>
+
+                    {% if t.description %}
+                        <div class="task-desc">{{ t.description }}</div>
+                    {% endif %}
+
+                    {% if t.responsible %}
+                        <div class="task-info">Ответственный: {{ t.responsible }}</div>
+                    {% endif %}
+
+                    {% if t.completed_at %}
+                        <div class="task-info">Выполнено: {{ t.completed_at }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="task-actions">
+                    {% if t.status == 'planned' %}
+                        <form action="/tasks/{{ t.id }}/start" method="POST">
+                            <button type="submit" class="btn btn-primary">Начать</button>
+                        </form>
+                    {% endif %}
+
+                    {% if t.status != 'done' %}
+                        <form action="/tasks/{{ t.id }}/complete" method="POST">
+                            <button type="submit" class="btn btn-warning">Выполнено</button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p class="empty">Задач пока нет.</p>
+        {% endif %}
+    </section>
+
+</div>
+</body>
+</html>
